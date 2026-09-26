@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+@variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  :root {
+    --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+  
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background-color: #f8fafc;
+    color: #0f172a;
+    min-height: 100vh;
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body.dark {
+    background-color: #0b0f17;
+    color: #f1f5f9;
+  }
+}
+
+
+/* Custom minimal UI inputs with high contrast */
+.clean-input {
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+  transition: all 0.15s ease-in-out;
+}
+
+.clean-input::placeholder {
+  color: #64748b;
+  opacity: 1;
+}
+
+.clean-input:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  outline: none;
+}
+
+.dark .clean-input {
+  background-color: #161e2e;
+  border-color: #2d3d54;
+  color: #f8fafc;
+}
+
+.dark .clean-input::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
+.dark .clean-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+}
+
+select option {
+  background-color: #ffffff;
+  color: #0f172a;
+}
+
+.dark select option {
+  background-color: #161e2e;
+  color: #f8fafc;
+}
+
+/* Smooth fade-in animation for step transition */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Print styles for Registration Ticket */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #printable-receipt, #printable-receipt * {
+    visibility: visible;
+  }
+  #printable-receipt {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 24px;
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}
+
+/* Hide scrollbar for clean horizontal scrolling sub-nav */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Prevent double-tap zoom delay on buttons for mobile browsers */
+button, a {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+
+
+
