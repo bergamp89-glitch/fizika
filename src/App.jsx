@@ -9,11 +9,11 @@ import { CheckCircle2, ShieldCheck } from 'lucide-react';
 const DEFAULT_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbw4zUbOkUsRTfuwEVIrOyviO_QV5B3CXDTq0iwNwhLQKU2jNc9bwFQ3roL2pBE7mW5fKQ/exec";
 
 const DEFAULT_SETTINGS = {
-  examTitle: import.meta.env.VITE_EXAM_TITLE || "GRE Imtihoni",
+  examTitle: import.meta.env.VITE_EXAM_TITLE || "Fizika Imtihoni",
   supportPhone: import.meta.env.VITE_SUPPORT_PHONE || "+998 (99) 627-99-99",
   googleSheetsWebhook: import.meta.env.VITE_GOOGLE_SHEETS_WEBHOOK || DEFAULT_WEBHOOK_URL,
   registrationOpen: true,
-  registrationNotice: "GRE imtihonida qatnashish uchun shaxsiy ma'lumotlaringizni to'ldiring."
+  registrationNotice: "Fizika imtihonida qatnashish uchun shaxsiy ma'lumotlaringizni to'ldiring."
 };
 
 export default function App() {
@@ -26,7 +26,7 @@ export default function App() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState(() => {
     try {
-      const savedTab = sessionStorage.getItem('ic3_active_tab');
+      const savedTab = sessionStorage.getItem('fizika_active_tab');
       return savedTab || 'form';
     } catch {
       return 'form';
@@ -35,7 +35,7 @@ export default function App() {
 
   useEffect(() => {
     try {
-      sessionStorage.setItem('ic3_active_tab', activeTab);
+      sessionStorage.setItem('fizika_active_tab', activeTab);
     } catch (e) {
       console.warn("Active tab saqlashda xatolik:", e);
     }
@@ -44,12 +44,12 @@ export default function App() {
   // Settings State: Preserves custom settings if saved by Admin, otherwise uses DEFAULT_SETTINGS
   const [appSettings, setAppSettings] = useState(() => {
     try {
-      const savedCustom = localStorage.getItem('ic3_custom_app_settings');
+      const savedCustom = localStorage.getItem('fizika_custom_app_settings');
       if (savedCustom) {
         const parsed = JSON.parse(savedCustom);
-        const resolvedTitle = (parsed.examTitle && parsed.examTitle !== "IC3-GS6 Imtihoni")
+        const resolvedTitle = parsed.examTitle
           ? parsed.examTitle 
-          : (import.meta.env.VITE_EXAM_TITLE || "GRE Imtihoni");
+          : (import.meta.env.VITE_EXAM_TITLE || "Fizika Imtihoni");
         return {
           ...DEFAULT_SETTINGS,
           ...parsed,
@@ -68,7 +68,7 @@ export default function App() {
   // Registrations State
   const [registrations, setRegistrations] = useState(() => {
     try {
-      const saved = localStorage.getItem('ic3_registrations');
+      const saved = localStorage.getItem('fizika_registrations');
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -78,7 +78,7 @@ export default function App() {
   // Save registrations to localStorage with quota overflow fallback
   useEffect(() => {
     try {
-      localStorage.setItem('ic3_registrations', JSON.stringify(registrations));
+      localStorage.setItem('fizika_registrations', JSON.stringify(registrations));
     } catch (e) {
       console.warn("localStorage kotasi to'ldi, rasmsiz engil variant saqlanmoqda:", e);
       try {
@@ -87,14 +87,34 @@ export default function App() {
           passportFront: c.passportFront ? { name: c.passportFront.name, size: c.passportFront.size, type: c.passportFront.type } : null,
           passportBack: c.passportBack ? { name: c.passportBack.name, size: c.passportBack.size, type: c.passportBack.type } : null
         }));
-        localStorage.setItem('ic3_registrations', JSON.stringify(lightRegistrations));
-      } catch (errLight) {
-        console.error("localStorage'ga saqlashda xatolik:", errLight);
+        localStorage.setItem('fizika_registrations', JSON.stringify(lightRegistrations));
+      } catch (e2) {
+        console.error("Xotirada saqlab bo'lmadi:", e2);
       }
     }
   }, [registrations]);
 
+  // Initialize theme from system preference or previous setting
   useEffect(() => {
+    try {
+      const savedTheme = localStorage.getItem('fizika_theme');
+      if (savedTheme) {
+        setIsDarkMode(savedTheme === 'dark');
+      } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        setIsDarkMode(true);
+      }
+    } catch (e) {
+      console.log('Theme init error', e);
+    }
+  }, []);
+
+  // Update theme on toggle
+  useEffect(() => {
+    try {
+      localStorage.setItem('fizika_theme', isDarkMode ? 'dark' : 'light');
+    } catch (e) {
+      console.log('Theme save error', e);
+    }
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
       document.body.classList.add('dark');
@@ -108,7 +128,7 @@ export default function App() {
     setToast({ message, type });
     setTimeout(() => {
       setToast(null);
-    }, 4000);
+    }, 4500);
   };
 
   const submitToGoogleSheets = async (candidateData) => {
@@ -123,15 +143,18 @@ export default function App() {
       // Clean payload for Google Apps Script Webhook
       const payload = {
         id: candidateData.id,
-        firstName: candidateData.firstName,
         lastName: candidateData.lastName,
-        email: candidateData.email,
-        phone: candidateData.phone,
+        firstName: candidateData.firstName,
+        middleName: candidateData.middleName || '',
         birthDate: candidateData.birthDate,
+        phone: candidateData.phone,
+        email: candidateData.email,
+        region: candidateData.region || '',
+        district: candidateData.district || '',
+        examRegion: candidateData.examRegion || '',
+        examDate: candidateData.examDate || '',
         passportNumber: candidateData.passportNumber,
         jshshir: candidateData.jshshir,
-        examLanguage: candidateData.examLanguage,
-        examModule: candidateData.examModule,
         submittedAt: candidateData.submittedAt,
         passportFront: candidateData.passportFront ? {
           name: candidateData.passportFront.name,
@@ -144,7 +167,7 @@ export default function App() {
       };
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout limit
+      const timeoutId = setTimeout(() => controller.abort(), 25000); // 25s timeout limit
 
       let response;
       try {
@@ -278,88 +301,90 @@ export default function App() {
   const handleCloseReceipt = () => {
     setActiveReceipt(null);
     if (isNewRegistration) {
-      setResetFormSignal(prev => prev + 1);
-      setActiveTab('form');
       setIsNewRegistration(false);
+      setResetFormSignal(prev => prev + 1);
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Admin handlers
-  const handleClearRegistrations = () => {
-    if (window.confirm("Haqiqatan ham barcha registratsiya ma'lumotlarini tozalamoqchimisiz?")) {
-      setRegistrations([]);
-      localStorage.removeItem('ic3_registrations');
-      showToast("Barcha arizalar tozalandi");
-    }
-  };
-
-
-
-  const handleDeleteCandidate = (id) => {
-    setRegistrations(prev => prev.filter(c => c.id !== id));
-    showToast("Nomzod o'chirildi");
-  };
-
-  const handleUpdateCandidateStatus = (id, newStatus) => {
-    setRegistrations(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
-    showToast(`Status '${newStatus}' holatiga o'zgartirildi`);
-  };
-
-  const handleEditCandidate = (updatedCandidate) => {
-    setRegistrations(prev => prev.map(c => c.id === updatedCandidate.id ? updatedCandidate : c));
-    showToast("Nomzod ma'lumotlari saqlandi");
-  };
-
-  const handleAddCandidate = (newCandidate) => {
-    setRegistrations(prev => [newCandidate, ...prev]);
-    showToast("Yangi nomzod bazaga qo'shildi");
   };
 
   const handleSaveSettings = (newSettings) => {
     setAppSettings(newSettings);
     try {
-      localStorage.setItem('ic3_custom_app_settings', JSON.stringify(newSettings));
+      localStorage.setItem('fizika_custom_app_settings', JSON.stringify(newSettings));
+      showToast("Sozlamalar muvaffaqiyatli saqlandi!");
     } catch (e) {
-      console.error("Custom settings saqlashda xatolik:", e);
+      console.warn("Sozlamalarni saqlashda xatolik:", e);
+      showToast("Sozlamalarni saqlashda xatolik", "error");
     }
-    showToast("Portal sozlamalari saqlandi");
+  };
+
+  const handleClearRegistrations = () => {
+    setRegistrations([]);
+    try {
+      localStorage.removeItem('fizika_registrations');
+      showToast("Barcha ro'yxatdan o'tganlar to tozalandi!");
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteCandidate = (id) => {
+    setRegistrations(prev => prev.filter(c => c.id !== id));
+    showToast("Nomzod arizasi o'chirildi!");
+  };
+
+  const handleUpdateCandidateStatus = (id, newStatus) => {
+    setRegistrations(prev => prev.map(c => c.id === id ? { ...c, status: newStatus } : c));
+    showToast(`Status '${newStatus}' ga o'zgartirildi!`);
+  };
+
+  const handleEditCandidate = (updatedCandidate) => {
+    setRegistrations(prev => prev.map(c => c.id === updatedCandidate.id ? updatedCandidate : c));
+    showToast("Nomzod ma'lumotlari yangilandi!");
+  };
+
+  const handleAddCandidate = (newCand) => {
+    setRegistrations(prev => [newCand, ...prev]);
+    showToast("Yangi nomzod muvaffaqiyatli qo'shildi!");
   };
 
   return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-200 ${isDarkMode ? 'bg-[#0b0f17] text-slate-100' : 'bg-slate-50 text-slate-900'
-      }`}>
+    <div className={`min-h-screen flex flex-col transition-colors duration-200 ${
+      isDarkMode ? 'bg-slate-950 text-slate-100' : 'bg-slate-50 text-slate-900'
+    }`}>
+      {/* Toast Notification */}
+      {toast && (
+        <div className="fixed top-3 left-3 right-3 sm:left-auto sm:right-4 z-50 animate-bounce max-w-md mx-auto sm:mx-0">
+          <div className={`px-4 py-2.5 rounded-xl shadow-xl flex items-center space-x-2 text-xs font-bold border ${
+            toast.type === 'error'
+              ? 'bg-rose-600 text-white border-rose-500'
+              : toast.type === 'warning'
+              ? 'bg-amber-600 text-white border-amber-500'
+              : 'bg-emerald-600 text-white border-emerald-500'
+          }`}>
+            <CheckCircle2 className="w-4 h-4 shrink-0" />
+            <span>{toast.message}</span>
+          </div>
+        </div>
+      )}
 
       {/* Header */}
-      <Header
-        isDarkMode={isDarkMode}
-        setIsDarkMode={setIsDarkMode}
-        activeTab={activeTab}
+      <Header 
+        isDarkMode={isDarkMode} 
+        setIsDarkMode={setIsDarkMode} 
+        activeTab={activeTab} 
         setActiveTab={setActiveTab}
         appSettings={appSettings}
       />
 
-      {/* Main Single Page Area */}
-      <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-10">
+      {/* Main Container */}
+      <main className="flex-1 max-w-5xl w-full mx-auto px-2.5 sm:px-6 py-4 sm:py-8">
         {activeTab === 'form' ? (
-          <div className="max-w-3xl mx-auto space-y-6">
-            {/* Hero Title & Notice */}
-            <div className="text-center max-w-xl mx-auto mb-6 sm:mb-8">
-              <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-                {appSettings.examTitle} Registratsiyasi
-              </h1>
-
-              <p className={`text-xs sm:text-sm mt-2 ${isDarkMode ? 'text-slate-400' : 'text-slate-600'} font-medium`}>
-                {appSettings.registrationNotice}
-              </p>
-            </div>
-
-            {/* Core Registration Form */}
+          <div className="space-y-6">
             <RegistrationForm
               onSubmitSuccess={handleRegistrationSuccess}
               onAdminLogin={() => {
                 setActiveTab('admin');
-                showToast("Admin panelga muvaffaqiyatli kirildi!");
+                showToast("Admin panelga muvaffaqiyatli kirdingiz!");
               }}
               isDarkMode={isDarkMode}
               isSubmitting={isSubmitting}
@@ -376,30 +401,15 @@ export default function App() {
             onUpdateCandidateStatus={handleUpdateCandidateStatus}
             onEditCandidate={handleEditCandidate}
             onAddCandidate={handleAddCandidate}
-            onViewReceipt={(cand) => {
-              setIsNewRegistration(false);
-              setActiveReceipt(cand);
-            }}
+            onViewReceipt={(cand) => setActiveReceipt(cand)}
             appSettings={appSettings}
             onSaveSettings={handleSaveSettings}
-            onLogout={() => setActiveTab('form')}
             isDarkMode={isDarkMode}
           />
         )}
       </main>
 
-      {/* Footer */}
-      <footer className={`border-t py-5 text-center text-xs transition-colors ${isDarkMode ? 'bg-slate-900/60 border-slate-800 text-slate-500' : 'bg-white border-slate-200 text-slate-500'
-        }`}>
-        <div className="max-w-3xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 font-medium text-slate-600 dark:text-slate-400">
-            <ShieldCheck className="w-4 h-4 text-emerald-500" />
-            <span>© 2026 {appSettings.examTitle} Portal. Barcha huquqlar himoyalangan.</span>
-          </div>
-        </div>
-      </footer>
-
-      {/* Registration Receipt Modal */}
+      {/* Printable Receipt Modal */}
       {activeReceipt && (
         <ReceiptModal
           data={activeReceipt}
@@ -408,7 +418,7 @@ export default function App() {
         />
       )}
 
-      {/* Duplicate Registration Warning Modal */}
+      {/* Duplicate Alert Modal */}
       {duplicateCandidate && (
         <DuplicateModal
           candidate={duplicateCandidate}
@@ -418,21 +428,15 @@ export default function App() {
         />
       )}
 
-      {/* Toast Notification */}
-      {toast && (
-        <div className={`fixed bottom-5 right-5 z-50 px-4 py-3 rounded-xl shadow-lg border flex items-center gap-2.5 animate-fadeIn ${
-          toast.type === 'error'
-            ? 'bg-slate-900 border-rose-500/40 text-rose-400'
-            : toast.type === 'warning'
-            ? 'bg-slate-900 border-amber-500/40 text-amber-400'
-            : 'bg-slate-900 border-emerald-500/40 text-emerald-400'
-        }`}>
-          <CheckCircle2 className={`w-4 h-4 shrink-0 ${
-            toast.type === 'error' ? 'text-rose-400' : toast.type === 'warning' ? 'text-amber-400' : 'text-emerald-400'
-          }`} />
-          <span className="text-xs font-bold text-white">{toast.message}</span>
-        </div>
-      )}
+      {/* Minimal Footer */}
+      <footer className={`py-4 border-t text-center text-xs transition-colors ${
+        isDarkMode ? 'border-slate-800 text-slate-500' : 'border-slate-200 text-slate-400'
+      }`}>
+        <p className="font-semibold select-none flex items-center justify-center gap-1.5">
+          <ShieldCheck className="w-3.5 h-3.5 text-blue-600" />
+          <span>{appSettings.examTitle} &copy; {new Date().getFullYear()} — Barcha huquqlar himoyalangan</span>
+        </p>
+      </footer>
     </div>
   );
 }

@@ -40,8 +40,8 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess, isDar
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 animate-fadeIn">
-      <div className={`relative max-w-sm w-full rounded-2xl p-6 border shadow-2xl transition-all ${
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-3 sm:p-4 animate-fadeIn">
+      <div className={`relative max-w-sm w-full rounded-2xl p-5 sm:p-6 border shadow-2xl transition-all ${
         isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
       }`}>
         <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800 mb-4">
@@ -55,7 +55,7 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess, isDar
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -64,7 +64,7 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess, isDar
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-bold uppercase tracking-wider mb-1.5 text-slate-700 dark:text-slate-300">
-              Login (Foydalanuvchi nomi)
+              Login
             </label>
             <div className="relative">
               <User className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
@@ -105,7 +105,7 @@ export default function AdminLoginModal({ isOpen, onClose, onLoginSuccess, isDar
 
           <button
             type="submit"
-            className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer mt-2"
+            className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer mt-2 active:scale-95"
           >
             Kirish
           </button>

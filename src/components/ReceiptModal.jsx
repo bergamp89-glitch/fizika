@@ -1,13 +1,16 @@
 import React, { useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
-import { CheckCircle2, X, ShieldCheck, User, Phone, Mail, FileText, Globe, Key, Calendar } from 'lucide-react';
+import { 
+  CheckCircle2, X, ShieldCheck, User, Phone, Mail, FileText, 
+  MapPin, Key, Calendar, CalendarCheck, Globe, Printer
+} from 'lucide-react';
 import confetti from 'canvas-confetti';
 
 export default function ReceiptModal({ data, onClose, isDarkMode }) {
   useEffect(() => {
     try {
       confetti({
-        particleCount: 80,
+        particleCount: 70,
         spread: 60,
         origin: { y: 0.6 }
       });
@@ -26,47 +29,63 @@ export default function ReceiptModal({ data, onClose, isDarkMode }) {
 
   if (!data) return null;
 
-  const qrValue = `GRE-REG|ID:${data.id}|NAME:${data.firstName}_${data.lastName}|JSHSHIR:${data.jshshir}|PASS:${data.passportNumber}|LANG:${data.examLanguage}`;
+  const fullName = `${data.lastName || ''} ${data.firstName || ''} ${data.middleName || ''}`.trim();
+  const address = `${data.region || ''}${data.district ? ', ' + data.district : ''}`.trim();
+  const qrValue = `FIZ-REG|ID:${data.id}|NAME:${fullName}|JSHSHIR:${data.jshshir}|PASS:${data.passportNumber}|DATE:${data.examDate}|REGION:${data.examRegion}`;
+
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-3 sm:p-4 overflow-y-auto">
-      <div className={`relative w-full max-w-md sm:max-w-lg rounded-2xl p-4 sm:p-5 border transition-all my-auto max-h-[92vh] overflow-y-auto space-y-4 ${
-        isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-xl'
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-2.5 sm:p-4 overflow-y-auto">
+      <div className={`relative w-full max-w-lg sm:max-w-xl rounded-2xl p-4 sm:p-6 border transition-all my-auto max-h-[94vh] overflow-y-auto space-y-3.5 sm:space-y-4 ${
+        isDarkMode ? 'bg-slate-900 border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900 shadow-2xl'
       }`}>
         
         {/* Modal Controls */}
         <div className="flex items-center justify-between border-b pb-2.5 border-slate-200 dark:border-slate-800 no-print">
-          <div className="flex items-center space-x-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs sm:text-sm">
+          <div className="flex items-center space-x-1.5 sm:space-x-2 text-emerald-600 dark:text-emerald-400 font-bold text-xs sm:text-sm">
             <CheckCircle2 className="w-4 h-4 shrink-0" />
-            <span>Registratsiya Muvaffaqiyatli Yakunlandi!</span>
+            <span className="truncate">Registratsiya Muvaffaqiyatli Yakunlandi!</span>
           </div>
 
-          <button
-            onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center space-x-1">
+            <button
+              onClick={handlePrint}
+              className="p-1.5 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Chop etish"
+            >
+              <Printer className="w-4 h-4" />
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
+              title="Yopish"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Ticket Details */}
         <div id="printable-receipt" className="space-y-3">
           {/* Header Banner */}
-          <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 rounded-xl border ${
+          <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 sm:p-3.5 rounded-xl border ${
             isDarkMode 
               ? 'bg-slate-800/50 border-slate-700' 
               : 'bg-slate-50 border-slate-200'
           }`}>
             <div className="flex items-center space-x-2.5">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-extrabold text-base shrink-0">
-                GRE
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-extrabold text-xs sm:text-sm shrink-0 shadow-xs">
+                FIZ
               </div>
               <div>
                 <h2 className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white leading-tight">
-                  GRE EXAM REGISTRATION TICKET
+                  IMTIHON QABUL VARAQASI (TICKET)
                 </h2>
                 <p className="text-[10px] text-slate-500 font-medium">
-                  Xalqaro Imtihon Qabul Varaqasi
+                  Fizika fani bo'yicha imtihon
                 </p>
               </div>
             </div>
@@ -81,29 +100,59 @@ export default function ReceiptModal({ data, onClose, isDarkMode }) {
           {/* Candidate Info Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
             {/* Candidate Name */}
-            <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'}`}>
+            <div className={`p-2.5 rounded-xl border sm:col-span-2 ${isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'}`}>
               <div className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 mb-0.5">
-                <User className="w-3 h-3 text-blue-600" /> F.I.SH
+                <User className="w-3 h-3 text-blue-600" /> F.I.SH. (To'liq)
               </div>
-              <div className="font-bold text-xs text-slate-900 dark:text-white truncate">
-                {data.lastName} {data.firstName}
+              <div className="font-bold text-xs sm:text-sm text-slate-900 dark:text-white">
+                {fullName}
               </div>
             </div>
 
-            {/* Exam Language */}
+            {/* Test topshirish sanasi */}
+            <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'}`}>
+              <div className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 mb-0.5">
+                <CalendarCheck className="w-3 h-3 text-emerald-600" /> Test Topshirish Sanasi
+              </div>
+              <div className="font-bold text-xs text-emerald-600 dark:text-emerald-400">
+                {data.examDate}
+              </div>
+            </div>
+
+            {/* Test topshirish hududi */}
+            <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'}`}>
+              <div className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 mb-0.5">
+                <MapPin className="w-3 h-3 text-emerald-600" /> Test Topshirish Hududi
+              </div>
+              <div className="font-bold text-xs text-slate-900 dark:text-white truncate">
+                {data.examRegion}
+              </div>
+            </div>
+
+            {/* Yashash manzili */}
+            <div className={`p-2.5 rounded-xl border sm:col-span-2 ${isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'}`}>
+              <div className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 mb-0.5">
+                <MapPin className="w-3 h-3 text-blue-600" /> Yashash Manzili
+              </div>
+              <div className="font-semibold text-xs text-slate-900 dark:text-white">
+                {address || "—"}
+              </div>
+            </div>
+
+            {/* Imtihon tili */}
             <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'}`}>
               <div className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 mb-0.5">
                 <Globe className="w-3 h-3 text-blue-600" /> Imtihon Tili
               </div>
-              <div className="font-bold text-xs text-blue-600 dark:text-blue-400">
-                {data.examLanguage}
+              <div className="font-bold text-xs text-purple-600 dark:text-purple-400">
+                {data.examLanguage || "O'zbek tili"}
               </div>
             </div>
 
             {/* Passport Number */}
             <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'}`}>
               <div className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 mb-0.5">
-                <FileText className="w-3 h-3 text-blue-600" /> Pasport Seriya va Raqam
+                <FileText className="w-3 h-3 text-blue-600" /> Pasport / ID Karta
               </div>
               <div className="font-mono font-bold text-xs text-slate-900 dark:text-white">
                 {data.passportNumber}
@@ -123,7 +172,7 @@ export default function ReceiptModal({ data, onClose, isDarkMode }) {
             {/* Birth Date */}
             <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'}`}>
               <div className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 mb-0.5">
-                <Calendar className="w-3 h-3 text-blue-600" /> Tug'ilgan Sanasi
+                <Calendar className="w-3 h-3 text-blue-600" /> Tug'ilgan Sana
               </div>
               <div className="font-semibold text-xs text-slate-900 dark:text-white">
                 {data.birthDate}
@@ -141,7 +190,7 @@ export default function ReceiptModal({ data, onClose, isDarkMode }) {
             </div>
 
             {/* Email */}
-            <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'} sm:col-span-2`}>
+            <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'}`}>
               <div className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 mb-0.5">
                 <Mail className="w-3 h-3 text-blue-600" /> Email
               </div>
@@ -155,35 +204,43 @@ export default function ReceiptModal({ data, onClose, isDarkMode }) {
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
             <div className="flex items-center space-x-2.5">
               <div className="p-1 bg-white rounded-lg border border-slate-200 shrink-0">
-                <QRCodeSVG value={qrValue} size={60} level="M" />
+                <QRCodeSVG value={qrValue} size={58} level="M" />
               </div>
               <div>
                 <div className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-bold">
                   <ShieldCheck className="w-3.5 h-3.5" /> TASDIQLANGAN
                 </div>
                 <p className="text-[10px] text-slate-500 mt-0.5 max-w-[200px]">
-                  Imtihon kunida ushbu varaqani hamda pasportingizni olib keling.
+                  Imtihon kunida ushbu varaqani hamda shaxsingizni tasdiqlovchi hujjatni olib keling.
                 </p>
               </div>
             </div>
 
-            <div className="text-center sm:text-right">
-              <span className="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 text-[10px] font-bold rounded inline-block">
+            <div className="text-center sm:text-right w-full sm:w-auto">
+              <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 text-[10px] font-bold rounded-lg inline-block">
                 STATUS: QABUL QILINDI
               </span>
-              <p className="text-[9px] text-slate-400 mt-0.5">GRE System v2026</p>
+              <p className="text-[9px] text-slate-400 mt-1">Fizika Tizimi v2026</p>
             </div>
           </div>
         </div>
 
         {/* Action Button - Single Prominent Close / Home Button */}
-        <div className="pt-2 no-print">
+        <div className="pt-1 sm:pt-2 no-print flex flex-col sm:flex-row gap-2">
+          <button
+            type="button"
+            onClick={handlePrint}
+            className="w-full sm:w-1/3 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Chop etish</span>
+          </button>
           <button
             type="button"
             onClick={onClose}
-            className="w-full py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+            className="w-full sm:w-2/3 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer active:scale-95"
           >
-            <span>Yopish (Asosiy oynaga qaytish)</span>
+            <span>Yopish (Bosh sahifa)</span>
           </button>
         </div>
       </div>

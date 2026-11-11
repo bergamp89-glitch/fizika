@@ -1,30 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import { User, Mail, Phone, Calendar, CreditCard, Key, ArrowRight, ArrowLeft, Check, AlertCircle, Loader2, XCircle } from 'lucide-react';
+import { 
+  User, Mail, Phone, Calendar, CreditCard, Key, ArrowRight, ArrowLeft, 
+  Check, AlertCircle, Loader2, XCircle, MapPin, Building, CalendarCheck, HelpCircle 
+} from 'lucide-react';
 import StepProgress from './StepProgress';
 import FileUpload from './FileUpload';
+import { UZBEKISTAN_REGIONS } from '../constants/regions';
 
 const INITIAL_FORM_DATA = {
-  firstName: '',
   lastName: '',
-  email: '',
-  phone: '+998 ',
+  firstName: '',
+  middleName: '',
   birthDate: '',
+  phone: '+998 ',
+  email: '',
+  region: '',
+  district: '',
+  examRegion: '',
+  examDate: '',
+  examLanguage: "O'zbek tili",
   passportNumber: '',
   jshshir: '',
-  examLanguage: 'English',
-  examModule: 'GRE General Test',
   passportFront: null,
   passportBack: null,
   termsAgreed: false,
 };
 
-export default function RegistrationForm({ onSubmitSuccess, onAdminLogin, isDarkMode, isSubmitting = false, appSettings, resetFormSignal = 0 }) {
+export default function RegistrationForm({ 
+  onSubmitSuccess, 
+  onAdminLogin, 
+  isDarkMode, 
+  isSubmitting = false, 
+  appSettings, 
+  resetFormSignal = 0 
+}) {
   const isRegistrationOpen = appSettings?.registrationOpen ?? true;
 
   // Persist step across browser refreshes
   const [currentStep, setCurrentStep] = useState(() => {
     try {
-      const savedStep = sessionStorage.getItem('ic3_draft_step');
+      const savedStep = sessionStorage.getItem('fizika_draft_step');
       return savedStep ? Math.min(Math.max(parseInt(savedStep, 10), 1), 4) : 1;
     } catch {
       return 1;
@@ -36,7 +51,7 @@ export default function RegistrationForm({ onSubmitSuccess, onAdminLogin, isDark
   // Persist form inputs across browser refreshes
   const [formData, setFormData] = useState(() => {
     try {
-      const savedForm = sessionStorage.getItem('ic3_draft_form_data');
+      const savedForm = sessionStorage.getItem('fizika_draft_form_data');
       if (savedForm) {
         return { ...INITIAL_FORM_DATA, ...JSON.parse(savedForm) };
       }
@@ -46,12 +61,12 @@ export default function RegistrationForm({ onSubmitSuccess, onAdminLogin, isDark
     }
   });
 
-  // Listen to resetFormSignal to reset form to step 1 upon closing receipt modal
+  // Reset form upon receipt modal close or explicit reset
   useEffect(() => {
     if (resetFormSignal > 0) {
       try {
-        sessionStorage.removeItem('ic3_draft_step');
-        sessionStorage.removeItem('ic3_draft_form_data');
+        sessionStorage.removeItem('fizika_draft_step');
+        sessionStorage.removeItem('fizika_draft_form_data');
       } catch (errDraft) {
         console.warn("Draft clearing error:", errDraft);
       }
@@ -64,7 +79,7 @@ export default function RegistrationForm({ onSubmitSuccess, onAdminLogin, isDark
   // Sync step changes to sessionStorage
   useEffect(() => {
     try {
-      sessionStorage.setItem('ic3_draft_step', currentStep.toString());
+      sessionStorage.setItem('fizika_draft_step', currentStep.toString());
     } catch (e) {
       console.warn("Draft step saqlashda xatolik:", e);
     }
@@ -73,25 +88,25 @@ export default function RegistrationForm({ onSubmitSuccess, onAdminLogin, isDark
   // Sync form data changes to sessionStorage with quota fallback
   useEffect(() => {
     try {
-      sessionStorage.setItem('ic3_draft_form_data', JSON.stringify(formData));
+      sessionStorage.setItem('fizika_draft_form_data', JSON.stringify(formData));
     } catch {
       try {
         const lightForm = {
           ...formData,
-          passportFront: formData.passportFront ? { name: formData.passportFront.name, size: formData.passportFront.size, type: formData.passportFront.type } : null,
-          passportBack: formData.passportBack ? { name: formData.passportBack.name, size: formData.passportBack.size, type: formData.passportBack.type } : null,
+          passportFront: null,
+          passportBack: null
         };
-        sessionStorage.setItem('ic3_draft_form_data', JSON.stringify(lightForm));
-      } catch (err) {
-        console.warn("Draft data saqlashda xatolik:", err);
+        sessionStorage.setItem('fizika_draft_form_data', JSON.stringify(lightForm));
+      } catch (e2) {
+        console.warn("SessionStorage saqlab bo'lmadi:", e2);
       }
     }
   }, [formData]);
 
   const steps = [
     { id: 1, title: "Shaxsiy ma'lumotlar" },
-    { id: 2, title: "Hujjat va JSHSHIR" },
-    { id: 3, title: "Imtihon tili" },
+    { id: 2, title: "Manzil va Test" },
+    { id: 3, title: "Pasport va JSHSHIR" },
     { id: 4, title: "Pasport rasmlari" },
   ];
 
@@ -150,23 +165,17 @@ export default function RegistrationForm({ onSubmitSuccess, onAdminLogin, isDark
     const newErrors = {};
 
     if (step === 1) {
-      if (!formData.firstName.trim()) newErrors.firstName = "Ismingizni kiriting";
-      if (!formData.lastName.trim()) newErrors.lastName = "Familiyangizni kiriting";
+      if (!formData.lastName.trim()) {
+        newErrors.lastName = "Familiyangizni kiriting (ingliz/lotin alifbosida)";
+      }
+      if (!formData.firstName.trim()) {
+        newErrors.firstName = "Ismingizni kiriting (ingliz/lotin alifbosida)";
+      }
+      if (!formData.middleName.trim()) {
+        newErrors.middleName = "Otangizning ismini kiriting (ingliz/lotin alifbosida)";
+      }
       
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!formData.email.trim()) {
-        newErrors.email = "Elektron pochtangizni kiriting";
-      } else if (!emailRegex.test(formData.email)) {
-        newErrors.email = "Noto'g'ri email formati (masalan: ali@mail.com)";
-      }
-
-      const digitsOnly = formData.phone.replace(/\D/g, '');
-      if (digitsOnly.length !== 12) {
-        newErrors.phone = "Telefon raqamini to'liq kiriting (+998 90 123-45-67)";
-      }
-    }
-
-    if (step === 2) {
+      // Birth Date
       if (!formData.birthDate || !formData.birthDate.trim()) {
         newErrors.birthDate = "Tug'ilgan sanangizni kiriting";
       } else {
@@ -180,24 +189,49 @@ export default function RegistrationForm({ onSubmitSuccess, onAdminLogin, isDark
 
           if (isNaN(day) || isNaN(month) || isNaN(year) || month < 1 || month > 12 || day < 1 || day > 31) {
             newErrors.birthDate = "Noto'g'ri sana kiritildi (masalan: 25.04.2000)";
-          } else if (year < 1940 || year > 2020) {
-            newErrors.birthDate = "Tug'ilgan yil 1940 va 2020 oralig'ida bo'lishi kerak";
-          } else {
-            const dateObj = new Date(year, month - 1, day);
-            if (
-              dateObj.getFullYear() !== year ||
-              dateObj.getMonth() !== month - 1 ||
-              dateObj.getDate() !== day
-            ) {
-              newErrors.birthDate = "Noto'g'ri sana kiritildi (masalan: 25.04.2000)";
-            }
+          } else if (year < 1940 || year > 2022) {
+            newErrors.birthDate = "Tug'ilgan yil 1940 va 2022 oralig'ida bo'lishi kerak";
           }
         }
       }
 
+      // Email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!formData.email.trim()) {
+        newErrors.email = "Elektron pochtangizni kiriting";
+      } else if (!emailRegex.test(formData.email)) {
+        newErrors.email = "Noto'g'ri email formati (masalan: ali@mail.com)";
+      }
+
+      // Phone
+      const digitsOnly = formData.phone.replace(/\D/g, '');
+      if (digitsOnly.length !== 12) {
+        newErrors.phone = "Telefon raqamini to'liq kiriting (+998 90 123-45-67)";
+      }
+    }
+
+    if (step === 2) {
+      if (!formData.region) {
+        newErrors.region = "Yashash viloyatingizni tanlang";
+      }
+      if (!formData.district.trim()) {
+        newErrors.district = "Tuman yoki shaharni kiriting";
+      }
+      if (!formData.examRegion) {
+        newErrors.examRegion = "Imtihon topshiriladigan hududni tanlang";
+      }
+      if (!formData.examDate) {
+        newErrors.examDate = "O'zingizga qulay test topshirish sanasini tanlang";
+      }
+      if (!formData.examLanguage) {
+        newErrors.examLanguage = "Imtihon topshirish tilini tanlang";
+      }
+    }
+
+    if (step === 3) {
       const cleanPass = formData.passportNumber.replace(/\s/g, '');
       if (cleanPass.length !== 9 || !/^[A-Z]{2}\d{7}$/.test(cleanPass)) {
-        newErrors.passportNumber = "Pasport seriya va raqami noto'g'ri (Masalan: AA 1234567)";
+        newErrors.passportNumber = "Pasport yoki ID karta seriya va raqamini to'g'ri kiriting (Masalan: AA 1234567)";
       }
 
       if (formData.jshshir.length !== 14) {
@@ -205,21 +239,15 @@ export default function RegistrationForm({ onSubmitSuccess, onAdminLogin, isDark
       }
     }
 
-    if (step === 3) {
-      if (!formData.examLanguage) {
-        newErrors.examLanguage = "Imtihon topshirish tilini tanlang";
-      }
-    }
-
     if (step === 4) {
       if (!formData.passportFront) {
-        newErrors.passportFront = "Pasport oldi rasmini yuklang";
+        newErrors.passportFront = "Pasport yoki ID kartaning oldi tomoni rasmini yuklang";
       }
       if (!formData.passportBack) {
-        newErrors.passportBack = "Pasport orqa rasmini yuklang";
+        newErrors.passportBack = "Pasport yoki ID kartaning orqa tomoni rasmini yuklang";
       }
       if (!formData.termsAgreed) {
-        newErrors.termsAgreed = "Ma'lumotlar to'g'riligini tasdiqlashingiz shart";
+        newErrors.termsAgreed = "Kiritilgan ma'lumotlar to'g'riligini tasdiqlashingiz shart";
       }
     }
 
@@ -231,6 +259,7 @@ export default function RegistrationForm({ onSubmitSuccess, onAdminLogin, isDark
     const adminUser = (import.meta.env.VITE_ADMIN_USER || 'admin').toLowerCase();
     const adminPass = import.meta.env.VITE_ADMIN_PASS || '0807';
 
+    // Secret Admin Login bypass via first/last name inputs
     if (
       currentStep === 1 &&
       adminUser &&
@@ -263,7 +292,7 @@ export default function RegistrationForm({ onSubmitSuccess, onAdminLogin, isDark
   const handleSubmit = (e) => {
     e.preventDefault();
     if (validateStep(4)) {
-      const submissionId = 'GRE-' + new Date().getFullYear() + '-' + Math.floor(100000 + Math.random() * 900000);
+      const submissionId = 'FIZ-' + new Date().getFullYear() + '-' + Math.floor(100000 + Math.random() * 900000);
       const now = new Date().toLocaleString('uz-UZ');
 
       const completedData = {
@@ -296,43 +325,71 @@ export default function RegistrationForm({ onSubmitSuccess, onAdminLogin, isDark
   }
 
   return (
-    <div className={`w-full max-w-3xl mx-auto rounded-2xl p-4 sm:p-8 border transition-colors ${
+    <div className={`w-full max-w-3xl mx-auto rounded-2xl sm:rounded-3xl p-3.5 sm:p-8 border transition-colors ${
       isDarkMode 
-        ? 'bg-slate-900 border-slate-800' 
-        : 'bg-white border-slate-200 shadow-xs'
+        ? 'bg-slate-900/95 border-slate-800 text-white shadow-xl' 
+        : 'bg-white border-slate-200 text-slate-900 shadow-md'
     }`}>
       
-      {/* Step Navigation Bar */}
+      {/* Step Progress Bar */}
       <StepProgress currentStep={currentStep} steps={steps} setStep={setCurrentStep} isDarkMode={isDarkMode} />
 
       <form onSubmit={handleSubmit} className="space-y-6">
-
         
         {/* STEP 1: SHAXSIY MA'LUMOTLAR */}
         {currentStep === 1 && (
           <div className="space-y-5 animate-fadeIn">
             <div className="border-b pb-3 border-slate-200 dark:border-slate-800">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                1-bosqich: Shaxsiy ma'lumotlar
+                1-bosqich: Shaxsiy ma'lumotlar (F.I.Sh. va Aloqa)
               </h2>
               <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Ism, familiya va aloqa ma'lumotlaringizni to'g'ri kiriting
+                Ism, familiya va otangizning ismini <b>ingliz/lotin alifbosida</b> to'liq kiriting
               </p>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-              {/* Ism */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4">
+              {/* Familiya */}
               <div>
                 <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${
                   isDarkMode ? 'text-slate-300' : 'text-slate-700'
                 }`}>
-                  Ism <span className="text-rose-500">*</span>
+                  Familiyangiz <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Jasur"
+                    placeholder="KARIMOV"
+                    value={formData.lastName}
+                    onChange={(e) => {
+                      setFormData(prev => ({ ...prev, lastName: e.target.value }));
+                      if (errors.lastName) setErrors(prev => ({ ...prev, lastName: null }));
+                    }}
+                    className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl text-sm font-medium clean-input ${
+                      errors.lastName ? 'border-rose-500 bg-rose-50/20' : ''
+                    }`}
+                  />
+                </div>
+                {errors.lastName && (
+                  <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5" /> {errors.lastName}
+                  </p>
+                )}
+              </div>
+
+              {/* Ism */}
+              <div>
+                <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${
+                  isDarkMode ? 'text-slate-300' : 'text-slate-700'
+                }`}>
+                  Ismingiz <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <User className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                  <input
+                    type="text"
+                    placeholder="ANVAR"
                     value={formData.firstName}
                     onChange={(e) => {
                       setFormData(prev => ({ ...prev, firstName: e.target.value }));
@@ -350,31 +407,87 @@ export default function RegistrationForm({ onSubmitSuccess, onAdminLogin, isDark
                 )}
               </div>
 
-              {/* Familiya */}
+              {/* Sharif / Otasining ismi */}
               <div>
                 <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${
                   isDarkMode ? 'text-slate-300' : 'text-slate-700'
                 }`}>
-                  Familiya <span className="text-rose-500">*</span>
+                  Otangizning ismi <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <User className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="Rahimov"
-                    value={formData.lastName}
+                    placeholder="BAXTIYOR O'G'LI"
+                    value={formData.middleName}
                     onChange={(e) => {
-                      setFormData(prev => ({ ...prev, lastName: e.target.value }));
-                      if (errors.lastName) setErrors(prev => ({ ...prev, lastName: null }));
+                      setFormData(prev => ({ ...prev, middleName: e.target.value }));
+                      if (errors.middleName) setErrors(prev => ({ ...prev, middleName: null }));
                     }}
                     className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl text-sm font-medium clean-input ${
-                      errors.lastName ? 'border-rose-500 bg-rose-50/20' : ''
+                      errors.middleName ? 'border-rose-500 bg-rose-50/20' : ''
                     }`}
                   />
                 </div>
-                {errors.lastName && (
+                {errors.middleName && (
                   <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" /> {errors.lastName}
+                    <AlertCircle className="w-3.5 h-3.5" /> {errors.middleName}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5 sm:gap-4">
+              {/* Tug'ilgan sana */}
+              <div>
+                <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${
+                  isDarkMode ? 'text-slate-300' : 'text-slate-700'
+                }`}>
+                  Tug'ilgan sana (KK.OO.YYYY) <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <Calendar className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="25.04.2002"
+                    maxLength={10}
+                    value={formData.birthDate}
+                    onChange={handleBirthDateChange}
+                    className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl text-sm font-mono clean-input ${
+                      errors.birthDate ? 'border-rose-500 bg-rose-50/20' : ''
+                    }`}
+                  />
+                </div>
+                {errors.birthDate && (
+                  <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5" /> {errors.birthDate}
+                  </p>
+                )}
+              </div>
+
+              {/* Telefon Raqami */}
+              <div>
+                <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${
+                  isDarkMode ? 'text-slate-300' : 'text-slate-700'
+                }`}>
+                  Telefon Raqam <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative">
+                  <Phone className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                  <input
+                    type="tel"
+                    inputMode="tel"
+                    value={formData.phone}
+                    onChange={handlePhoneChange}
+                    className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl text-sm font-mono clean-input ${
+                      errors.phone ? 'border-rose-500 bg-rose-50/20' : ''
+                    }`}
+                  />
+                </div>
+                {errors.phone && (
+                  <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5" /> {errors.phone}
                   </p>
                 )}
               </div>
@@ -407,83 +520,215 @@ export default function RegistrationForm({ onSubmitSuccess, onAdminLogin, isDark
                   </p>
                 )}
               </div>
+            </div>
+          </div>
+        )}
 
-              {/* Telefon Raqam */}
-              <div>
-                <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${
-                  isDarkMode ? 'text-slate-300' : 'text-slate-700'
-                }`}>
-                  Telefon Raqam <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <Phone className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
-                  <input
-                    type="text"
-                    value={formData.phone}
-                    onChange={handlePhoneChange}
-                    placeholder="+998 90 123-45-67"
-                    className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl font-mono text-sm font-medium clean-input ${
-                      errors.phone ? 'border-rose-500 bg-rose-50/20' : ''
+        {/* STEP 2: YASHASH MANZILI VA TEST PARAMETRLARI */}
+        {currentStep === 2 && (
+          <div className="space-y-5 animate-fadeIn">
+            <div className="border-b pb-3 border-slate-200 dark:border-slate-800">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+                2-bosqich: Yashash manzili va Test parametrlari
+              </h2>
+              <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Yashash hududingiz va o'zingizga qulay imtihon joyi hamda sanasini tanlang
+              </p>
+            </div>
+
+            {/* Yashash joyi */}
+            <div className={`p-4 rounded-xl border space-y-3.5 ${
+              isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <h3 className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                <MapPin className="w-4 h-4" /> Yashash manzili
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Yashash viloyati */}
+                <div>
+                  <label className={`block text-xs font-semibold mb-1.5 ${
+                    isDarkMode ? 'text-slate-300' : 'text-slate-700'
+                  }`}>
+                    Viloyat / Shahar <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={formData.region}
+                    onChange={(e) => {
+                      setFormData(prev => ({ ...prev, region: e.target.value }));
+                      if (errors.region) setErrors(prev => ({ ...prev, region: null }));
+                    }}
+                    className={`w-full pl-3.5 pr-8 py-2.5 rounded-xl text-sm font-medium clean-input ${
+                      errors.region ? 'border-rose-500 bg-rose-50/20' : ''
                     }`}
-                  />
+                  >
+                    <option value="">Viloyatni tanlang...</option>
+                    {UZBEKISTAN_REGIONS.map(reg => (
+                      <option key={reg} value={reg}>{reg}</option>
+                    ))}
+                  </select>
+                  {errors.region && (
+                    <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" /> {errors.region}
+                    </p>
+                  )}
                 </div>
-                {errors.phone && (
-                  <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" /> {errors.phone}
-                  </p>
-                )}
+
+                {/* Tuman / Shahar */}
+                <div>
+                  <label className={`block text-xs font-semibold mb-1.5 ${
+                    isDarkMode ? 'text-slate-300' : 'text-slate-700'
+                  }`}>
+                    Tuman yoki Shahar <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Building className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Chilonzor tumani"
+                      value={formData.district}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, district: e.target.value }));
+                        if (errors.district) setErrors(prev => ({ ...prev, district: null }));
+                      }}
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl text-sm font-medium clean-input ${
+                        errors.district ? 'border-rose-500 bg-rose-50/20' : ''
+                      }`}
+                    />
+                  </div>
+                  {errors.district && (
+                    <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" /> {errors.district}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Test topshirish parametrlari */}
+            <div className={`p-4 rounded-xl border space-y-3.5 ${
+              isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50 border-slate-200'
+            }`}>
+              <h3 className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                <CalendarCheck className="w-4 h-4" /> Test topshirish parametrlari
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Test topshirish hududi */}
+                <div>
+                  <label className={`block text-xs font-semibold mb-1.5 ${
+                    isDarkMode ? 'text-slate-300' : 'text-slate-700'
+                  }`}>
+                    Test topshirish hududi <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={formData.examRegion}
+                    onChange={(e) => {
+                      setFormData(prev => ({ ...prev, examRegion: e.target.value }));
+                      if (errors.examRegion) setErrors(prev => ({ ...prev, examRegion: null }));
+                    }}
+                    className={`w-full pl-3.5 pr-8 py-2.5 rounded-xl text-sm font-medium clean-input ${
+                      errors.examRegion ? 'border-rose-500 bg-rose-50/20' : ''
+                    }`}
+                  >
+                    <option value="">Hududni tanlang...</option>
+                    {UZBEKISTAN_REGIONS.map(reg => (
+                      <option key={reg} value={reg}>{reg}</option>
+                    ))}
+                  </select>
+                  {errors.examRegion && (
+                    <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" /> {errors.examRegion}
+                    </p>
+                  )}
+                </div>
+
+                {/* Test topshirish sanasi */}
+                <div>
+                  <label className={`block text-xs font-semibold mb-1.5 ${
+                    isDarkMode ? 'text-slate-300' : 'text-slate-700'
+                  }`}>
+                    Test topshirish sanasi (Qulay sana) <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative">
+                    <Calendar className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
+                    <input
+                      type="date"
+                      value={formData.examDate}
+                      onChange={(e) => {
+                        setFormData(prev => ({ ...prev, examDate: e.target.value }));
+                        if (errors.examDate) setErrors(prev => ({ ...prev, examDate: null }));
+                      }}
+                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl text-sm font-medium clean-input ${
+                        errors.examDate ? 'border-rose-500 bg-rose-50/20' : ''
+                      }`}
+                    />
+                  </div>
+                  {errors.examDate && (
+                    <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" /> {errors.examDate}
+                    </p>
+                  )}
+                </div>
+
+                {/* Imtihon tili */}
+                <div className="sm:col-span-2">
+                  <label className={`block text-xs font-semibold mb-1.5 ${
+                    isDarkMode ? 'text-slate-300' : 'text-slate-700'
+                  }`}>
+                    Imtihon topshirish tili <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {["Rus tili", "Ingliz tili"].map((lang) => (
+                      <button
+                        key={lang}
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({ ...prev, examLanguage: lang }));
+                          if (errors.examLanguage) setErrors(prev => ({ ...prev, examLanguage: null }));
+                        }}
+                        className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer text-center ${
+                          formData.examLanguage === lang
+                            ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                            : isDarkMode
+                            ? 'bg-slate-800/80 border-slate-700 text-slate-300 hover:bg-slate-800'
+                            : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                        }`}
+                      >
+                        {lang}
+                      </button>
+                    ))}
+                  </div>
+                  {errors.examLanguage && (
+                    <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5" /> {errors.examLanguage}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
         )}
 
-        {/* STEP 2: HUJJAT VA JSHSHIR */}
-        {currentStep === 2 && (
+        {/* STEP 3: PASPORT VA JSHSHIR */}
+        {currentStep === 3 && (
           <div className="space-y-5 animate-fadeIn">
             <div className="border-b pb-3 border-slate-200 dark:border-slate-800">
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                2-bosqich: Pasport va JSHSHIR
+                3-bosqich: Pasport va JSHSHIR
               </h2>
               <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Pasport seriyasi va 14 xonali JSHSHIR kodingizni kiriting
+                Pasport seriya/raqami hamda 14 xonali JSHSHIR raqamingizni aniq kiriting
               </p>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
-              {/* Tug'ilgan sana */}
+              {/* Pasport Seriya va Raqam */}
               <div>
                 <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${
                   isDarkMode ? 'text-slate-300' : 'text-slate-700'
                 }`}>
-                  Tug'ilgan Sana <span className="text-rose-500">*</span>
-                </label>
-                <div className="relative">
-                  <Calendar className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
-                  <input
-                    type="text"
-                    inputMode="numeric"
-                    placeholder="25.04.2000"
-                    maxLength={10}
-                    value={formData.birthDate}
-                    onChange={handleBirthDateChange}
-                    className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl font-mono text-sm font-medium clean-input ${
-                      errors.birthDate ? 'border-rose-500 bg-rose-50/20' : ''
-                    }`}
-                  />
-                </div>
-                {errors.birthDate && (
-                  <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
-                    <AlertCircle className="w-3.5 h-3.5" /> {errors.birthDate}
-                  </p>
-                )}
-              </div>
-
-              {/* Pasport Raqami */}
-              <div>
-                <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${
-                  isDarkMode ? 'text-slate-300' : 'text-slate-700'
-                }`}>
-                  Pasport Seriya va Raqam <span className="text-rose-500">*</span>
+                  Pasport / ID Karta Seriya va Raqam <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative">
                   <CreditCard className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
@@ -493,7 +738,7 @@ export default function RegistrationForm({ onSubmitSuccess, onAdminLogin, isDark
                     maxLength={10}
                     value={formData.passportNumber}
                     onChange={handlePassportChange}
-                    className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl font-mono text-sm font-bold tracking-wider uppercase clean-input ${
+                    className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl text-sm font-mono tracking-wider font-bold clean-input ${
                       errors.passportNumber ? 'border-rose-500 bg-rose-50/20' : ''
                     }`}
                   />
@@ -503,229 +748,40 @@ export default function RegistrationForm({ onSubmitSuccess, onAdminLogin, isDark
                     <AlertCircle className="w-3.5 h-3.5" /> {errors.passportNumber}
                   </p>
                 )}
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Masalan: <b>AA 1234567</b> yoki ID karta seriyasi
+                </p>
               </div>
 
               {/* JSHSHIR */}
-              <div className="sm:col-span-2">
-                <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
-                  <label className={`block text-xs font-semibold uppercase tracking-wider ${
-                    isDarkMode ? 'text-slate-300' : 'text-slate-700'
-                  }`}>
-                    JSHSHIR (14 xonali shaxsiy kod) <span className="text-rose-500">*</span>
-                  </label>
-                  <span className={`text-xs font-mono ${
-                    formData.jshshir.length === 14 
-                      ? 'text-emerald-600 dark:text-emerald-400 font-bold' 
-                      : isDarkMode ? 'text-slate-500' : 'text-slate-400'
-                  }`}>
-                    {formData.jshshir.length} / 14
-                  </span>
-                </div>
+              <div>
+                <label className={`block text-xs font-semibold uppercase tracking-wider mb-1.5 ${
+                  isDarkMode ? 'text-slate-300' : 'text-slate-700'
+                }`}>
+                  JSHSHIR (PINFL - 14 ta raqam) <span className="text-rose-500">*</span>
+                </label>
                 <div className="relative">
                   <Key className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
                   <input
                     type="text"
-                    placeholder="31204981230045"
+                    inputMode="numeric"
+                    placeholder="30101901230045"
                     maxLength={14}
                     value={formData.jshshir}
                     onChange={handleJshshirChange}
-                    className={`w-full pl-10 pr-10 py-2.5 rounded-xl font-mono text-sm font-bold tracking-widest clean-input ${
+                    className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl text-sm font-mono tracking-wider font-bold clean-input ${
                       errors.jshshir ? 'border-rose-500 bg-rose-50/20' : ''
                     }`}
                   />
-                  {formData.jshshir.length === 14 && (
-                    <Check className="w-4 h-4 absolute right-3.5 top-3 text-emerald-500 stroke-[3]" />
-                  )}
                 </div>
-                {errors.jshshir ? (
+                {errors.jshshir && (
                   <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
                     <AlertCircle className="w-3.5 h-3.5" /> {errors.jshshir}
                   </p>
-                ) : (
-                  <p className={`text-[11px] mt-1 ${isDarkMode ? 'text-slate-500' : 'text-slate-500'}`}>
-                    JSHSHIR — pasport yoki ID-kartaning pastki qismidagi 14 xonali raqam
-                  </p>
                 )}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 3: GRE IMTIHON TURI VA TILI */}
-        {currentStep === 3 && (
-          <div className="space-y-6 animate-fadeIn">
-            <div className="border-b pb-3 border-slate-200 dark:border-slate-800">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                3-bosqich: GRE Imtihon Yo'nalishi va Tili
-              </h2>
-              <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                Topshirmoqchi bo'lgan GRE imtihon turi hamda topshirish tilini tanlang
-              </p>
-            </div>
-
-            {/* GRE Test Type Selection */}
-            <div>
-              <label className={`block text-xs font-semibold uppercase tracking-wider mb-2.5 ${
-                isDarkMode ? 'text-slate-300' : 'text-slate-700'
-              }`}>
-                GRE Imtihon Yo'nalishi (Test Type) <span className="text-rose-500">*</span>
-              </label>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                {/* GRE General Test */}
-                <div
-                  onClick={() => setFormData(prev => ({ ...prev, examModule: 'GRE General Test' }))}
-                  className={`p-4 rounded-xl border cursor-pointer transition-all flex items-start space-x-3.5 ${
-                    formData.examModule === 'GRE General Test'
-                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-500/20 ring-1 ring-blue-600'
-                      : isDarkMode
-                      ? 'border-slate-800 bg-slate-800/40 hover:border-slate-700'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5">
-                    🎓
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h3 className={`font-bold text-sm ${
-                        formData.examModule === 'GRE General Test'
-                          ? 'text-blue-900 dark:text-blue-300'
-                          : 'text-slate-900 dark:text-white'
-                      }`}>
-                        GRE General Test
-                      </h3>
-                      {formData.examModule === 'GRE General Test' && (
-                        <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 stroke-[3] shrink-0" />
-                      )}
-                    </div>
-                    <p className={`text-xs mt-1 leading-relaxed ${
-                      formData.examModule === 'GRE General Test'
-                        ? 'text-blue-700 dark:text-blue-300'
-                        : isDarkMode ? 'text-slate-400' : 'text-slate-600'
-                    }`}>
-                      Verbal Reasoning, Quantitative Reasoning, Analytical Writing
-                    </p>
-                  </div>
-                </div>
-
-                {/* GRE Subject Test */}
-                <div
-                  onClick={() => setFormData(prev => ({ ...prev, examModule: 'GRE Subject Test' }))}
-                  className={`p-4 rounded-xl border cursor-pointer transition-all flex items-start space-x-3.5 ${
-                    formData.examModule === 'GRE Subject Test'
-                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-500/20 ring-1 ring-blue-600'
-                      : isDarkMode
-                      ? 'border-slate-800 bg-slate-800/40 hover:border-slate-700'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">
-                    🔬
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <h3 className={`font-bold text-sm ${
-                        formData.examModule === 'GRE Subject Test'
-                          ? 'text-blue-900 dark:text-blue-300'
-                          : 'text-slate-900 dark:text-white'
-                      }`}>
-                        GRE Subject Test
-                      </h3>
-                      {formData.examModule === 'GRE Subject Test' && (
-                        <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 stroke-[3] shrink-0" />
-                      )}
-                    </div>
-                    <p className={`text-xs mt-1 leading-relaxed ${
-                      formData.examModule === 'GRE Subject Test'
-                        ? 'text-blue-700 dark:text-blue-300'
-                        : isDarkMode ? 'text-slate-400' : 'text-slate-600'
-                    }`}>
-                      Ixtisoslashgan fanlar (Mathematics, Physics, Psychology)
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Language Selection */}
-            <div>
-              <label className={`block text-xs font-semibold uppercase tracking-wider mb-2.5 ${
-                isDarkMode ? 'text-slate-300' : 'text-slate-700'
-              }`}>
-                Imtihon Topshirish Tili <span className="text-rose-500">*</span>
-              </label>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                {/* English option */}
-                <div
-                  onClick={() => setFormData(prev => ({ ...prev, examLanguage: 'English' }))}
-                  className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center space-x-3.5 ${
-                    formData.examLanguage === 'English'
-                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-500/20 ring-1 ring-blue-600'
-                      : isDarkMode
-                      ? 'border-slate-800 bg-slate-800/40 hover:border-slate-700'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <div className="text-2xl">🇬🇧</div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <h3 className={`font-bold text-sm ${
-                        formData.examLanguage === 'English'
-                          ? 'text-blue-900 dark:text-blue-300'
-                          : 'text-slate-900 dark:text-white'
-                      }`}>
-                        English
-                      </h3>
-                      {formData.examLanguage === 'English' && (
-                        <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 stroke-[3]" />
-                      )}
-                    </div>
-                    <p className={`text-xs mt-0.5 ${
-                      formData.examLanguage === 'English'
-                        ? 'text-blue-700 dark:text-blue-300'
-                        : isDarkMode ? 'text-slate-400' : 'text-slate-600'
-                    }`}>
-                      Standard international GRE format
-                    </p>
-                  </div>
-                </div>
-
-                {/* Russian option */}
-                <div
-                  onClick={() => setFormData(prev => ({ ...prev, examLanguage: 'Russian' }))}
-                  className={`p-4 rounded-xl border cursor-pointer transition-all flex items-center space-x-3.5 ${
-                    formData.examLanguage === 'Russian'
-                      ? 'border-blue-600 bg-blue-50 dark:bg-blue-500/20 ring-1 ring-blue-600'
-                      : isDarkMode
-                      ? 'border-slate-800 bg-slate-800/40 hover:border-slate-700'
-                      : 'border-slate-200 bg-white hover:border-slate-300'
-                  }`}
-                >
-                  <div className="text-2xl">🇷🇺</div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <h3 className={`font-bold text-sm ${
-                        formData.examLanguage === 'Russian'
-                          ? 'text-blue-900 dark:text-blue-300'
-                          : 'text-slate-900 dark:text-white'
-                      }`}>
-                        Russian
-                      </h3>
-                      {formData.examLanguage === 'Russian' && (
-                        <Check className="w-4 h-4 text-blue-600 dark:text-blue-400 stroke-[3]" />
-                      )}
-                    </div>
-                    <p className={`text-xs mt-0.5 ${
-                      formData.examLanguage === 'Russian'
-                        ? 'text-blue-700 dark:text-blue-300'
-                        : isDarkMode ? 'text-slate-400' : 'text-slate-600'
-                    }`}>
-                      Экзамен / инструкции на русском языке
-                    </p>
-                  </div>
-                </div>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  Pasport yoki ID kartaning pastki qismidagi 14 ta raqam
+                </p>
               </div>
             </div>
           </div>
@@ -738,147 +794,109 @@ export default function RegistrationForm({ onSubmitSuccess, onAdminLogin, isDark
               <h2 className="text-lg font-bold text-slate-900 dark:text-white">
                 4-bosqich: Pasport rasmlari va tasdiqlash
               </h2>
-              <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-600'}`}>
-                Pasportingiz rasmlarini yuklang va ma'lumotlarni tasdiqlang
+              <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                Pasport yoki ID kartaning old va orqa tomoni sifatli rasmlarini yuklang
               </p>
             </div>
 
-            <FileUpload
-              label="Pasport Oldi Tarafi Rasmi (Suratli tomoni)"
-              description="Surat va pasport ma'lumotlari aniq ko'rinsin (JPG, PNG, WEBP, PDF)"
-              fileData={formData.passportFront}
-              onFileSelect={(data) => {
-                setFormData(prev => ({ ...prev, passportFront: data }));
-                if (errors.passportFront) setErrors(prev => ({ ...prev, passportFront: null }));
-              }}
-              onFileRemove={() => setFormData(prev => ({ ...prev, passportFront: null }))}
-              isDarkMode={isDarkMode}
-              required={true}
-            />
-            {errors.passportFront && (
-              <p className="text-xs text-rose-500 flex items-center gap-1 font-medium -mt-3">
-                <AlertCircle className="w-3.5 h-3.5" /> {errors.passportFront}
-              </p>
-            )}
-
-            <FileUpload
-              label="Pasport Orqa Tarafi Rasmi (JSHSHIR / Propiska tomoni)"
-              description="Pasportning orqa sahifasi yoki ID-karta orqasi"
-              fileData={formData.passportBack}
-              onFileSelect={(data) => {
-                setFormData(prev => ({ ...prev, passportBack: data }));
-                if (errors.passportBack) setErrors(prev => ({ ...prev, passportBack: null }));
-              }}
-              onFileRemove={() => setFormData(prev => ({ ...prev, passportBack: null }))}
-              isDarkMode={isDarkMode}
-              required={true}
-            />
-            {errors.passportBack && (
-              <p className="text-xs text-rose-500 flex items-center gap-1 font-medium -mt-3">
-                <AlertCircle className="w-3.5 h-3.5" /> {errors.passportBack}
-              </p>
-            )}
-
-            {/* Summary Review */}
-            <div className={`p-4 rounded-xl border ${
-              isDarkMode ? 'bg-slate-800/60 border-slate-700' : 'bg-slate-100/80 border-slate-200'
-            }`}>
-              <h3 className="font-bold text-xs text-slate-900 dark:text-white uppercase tracking-wider mb-2.5">
-                Kiritilgan Ma'lumotlar Xulosasi:
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5 text-xs">
-                <div>
-                  <span className="text-slate-600 dark:text-slate-400 block font-medium">F.I.SH:</span>
-                  <span className="font-bold text-slate-900 dark:text-white">{formData.lastName} {formData.firstName}</span>
-                </div>
-                <div>
-                  <span className="text-slate-600 dark:text-slate-400 block font-medium">Email:</span>
-                  <span className="font-bold text-slate-900 dark:text-white truncate block">{formData.email}</span>
-                </div>
-                <div>
-                  <span className="text-slate-600 dark:text-slate-400 block font-medium">Telefon:</span>
-                  <span className="font-bold font-mono text-slate-900 dark:text-white">{formData.phone}</span>
-                </div>
-                <div>
-                  <span className="text-slate-600 dark:text-slate-400 block font-medium">Pasport:</span>
-                  <span className="font-bold font-mono text-blue-700 dark:text-blue-400">{formData.passportNumber}</span>
-                </div>
-                <div>
-                  <span className="text-slate-600 dark:text-slate-400 block font-medium">JSHSHIR:</span>
-                  <span className="font-bold font-mono text-slate-900 dark:text-white">{formData.jshshir}</span>
-                </div>
-                <div>
-                  <span className="text-slate-600 dark:text-slate-400 block font-medium">GRE Yo'nalishi:</span>
-                  <span className="font-bold text-blue-700 dark:text-blue-400">{formData.examModule}</span>
-                </div>
-                <div>
-                  <span className="text-slate-600 dark:text-slate-400 block font-medium">Imtihon Tili:</span>
-                  <span className="font-bold text-blue-700 dark:text-blue-400">{formData.examLanguage}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Terms Agreement */}
-            <div className="flex items-start space-x-2.5 pt-1">
-              <input
-                type="checkbox"
-                id="termsAgreed"
-                checked={formData.termsAgreed}
-                onChange={(e) => {
-                  setFormData(prev => ({ ...prev, termsAgreed: e.target.checked }));
-                  if (errors.termsAgreed) setErrors(prev => ({ ...prev, termsAgreed: null }));
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Old tomoni */}
+              <FileUpload
+                label="Pasport / ID Karta Oldi Tomoni"
+                description="Fotosurat va shaxsiy ma'lumotlar aniq ko'rinsin (JPG, PNG, PDF)"
+                fileData={formData.passportFront}
+                onFileSelect={(file) => {
+                  setFormData(prev => ({ ...prev, passportFront: file }));
+                  if (errors.passportFront) setErrors(prev => ({ ...prev, passportFront: null }));
                 }}
-                className="mt-0.5 w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                onFileRemove={() => setFormData(prev => ({ ...prev, passportFront: null }))}
+                isDarkMode={isDarkMode}
               />
-              <label htmlFor="termsAgreed" className={`text-xs font-medium cursor-pointer leading-relaxed ${
-                isDarkMode ? 'text-slate-200' : 'text-slate-800'
-              }`}>
-                Kiritilgan shaxsiy ma'lumotlar hamda yuklangan pasport rasmlari haqiqiyligini tasdiqlayman.
-              </label>
+
+              {/* Orqa tomoni */}
+              <FileUpload
+                label="Pasport / ID Karta Orqa Tomoni"
+                description="Propiska yoki QR-kod qismi aniq ko'rinsin (JPG, PNG, PDF)"
+                fileData={formData.passportBack}
+                onFileSelect={(file) => {
+                  setFormData(prev => ({ ...prev, passportBack: file }));
+                  if (errors.passportBack) setErrors(prev => ({ ...prev, passportBack: null }));
+                }}
+                onFileRemove={() => setFormData(prev => ({ ...prev, passportBack: null }))}
+                isDarkMode={isDarkMode}
+              />
             </div>
-            {errors.termsAgreed && (
-              <p className="text-xs text-rose-500 flex items-center gap-1 font-medium">
-                <AlertCircle className="w-3.5 h-3.5" /> {errors.termsAgreed}
-              </p>
+
+            {(errors.passportFront || errors.passportBack) && (
+              <div className="p-3 rounded-xl bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0" />
+                <span>{errors.passportFront || errors.passportBack}</span>
+              </div>
             )}
+
+            {/* Terms checkbox */}
+            <div className={`p-4 rounded-xl border transition-colors ${
+              errors.termsAgreed 
+                ? 'border-rose-400 bg-rose-50/20' 
+                : isDarkMode ? 'border-slate-800 bg-slate-800/30' : 'border-slate-200 bg-slate-50/50'
+            }`}>
+              <label className="flex items-start space-x-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={formData.termsAgreed}
+                  onChange={(e) => {
+                    setFormData(prev => ({ ...prev, termsAgreed: e.target.checked }));
+                    if (errors.termsAgreed) setErrors(prev => ({ ...prev, termsAgreed: null }));
+                  }}
+                  className="mt-0.5 w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                />
+                <span className="text-xs text-slate-600 dark:text-slate-300 select-none">
+                  Kiritilgan barcha ma'lumotlar to'g'riligini va pasport nusxalarining haqiqiyligini tasdiqlayman. Imtihon qoidalari bilan to'liq tanishdim.
+                </span>
+              </label>
+              {errors.termsAgreed && (
+                <p className="text-xs text-rose-500 mt-2 flex items-center gap-1 font-semibold">
+                  <AlertCircle className="w-3.5 h-3.5" /> {errors.termsAgreed}
+                </p>
+              )}
+            </div>
           </div>
         )}
 
-
-        {/* NAVIGATION BUTTONS */}
-        <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3">
+        {/* Action Navigation Buttons */}
+        <div className="flex items-center justify-between gap-2.5 pt-4 border-t border-slate-200 dark:border-slate-800">
           {currentStep > 1 ? (
             <button
               type="button"
               onClick={handlePrevStep}
-              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 border transition-colors ${
-                isDarkMode
-                  ? 'border-slate-700 text-slate-300 hover:bg-slate-800'
-                  : 'border-slate-300 text-slate-700 hover:bg-slate-100'
+              disabled={isSubmitting}
+              className={`px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-1.5 sm:gap-2 border transition-all cursor-pointer active:scale-95 ${
+                isDarkMode 
+                  ? 'border-slate-700 hover:bg-slate-800 text-slate-300' 
+                  : 'border-slate-300 hover:bg-slate-100 text-slate-700'
               }`}
             >
-              <ArrowLeft className="w-4 h-4" /> Orqaga
+              <ArrowLeft className="w-4 h-4" />
+              <span>Orqaga</span>
             </button>
-          ) : <div />}
+          ) : (
+            <div />
+          )}
 
           {currentStep < 4 ? (
             <button
               type="button"
               onClick={handleNextStep}
-              className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm flex items-center gap-1.5 transition-colors shadow-xs"
+              className="px-4.5 sm:px-6 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5 sm:gap-2 shadow-sm transition-all cursor-pointer active:scale-95"
             >
-              <span>Keyingi bosqich</span>
+              <span>Davom etish</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           ) : (
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`px-6 py-2.5 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-colors shadow-xs ${
-                isSubmitting
-                  ? 'bg-emerald-700 text-slate-200 cursor-not-allowed opacity-80'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
-              }`}
+              className="px-4.5 sm:px-8 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white flex items-center gap-1.5 sm:gap-2 shadow-md transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed active:scale-95"
             >
               {isSubmitting ? (
                 <>
@@ -887,17 +905,15 @@ export default function RegistrationForm({ onSubmitSuccess, onAdminLogin, isDark
                 </>
               ) : (
                 <>
-                  <Check className="w-4 h-4 stroke-[3]" />
-                  <span>Registratsiyani Yakunlash</span>
+                  <Check className="w-4 h-4 stroke-[2.5]" />
+                  <span>Arizani Yuborish</span>
                 </>
               )}
             </button>
           )}
-
         </div>
+
       </form>
     </div>
   );
 }
-
-

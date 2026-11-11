@@ -1,15 +1,43 @@
 /**
- * GRE Registration Backend - Google Apps Script
+ * Fizika Imtihoni Backend - Google Apps Script
  * 
- * Ushbu skript Google Sheets va Google Docs o'rtasidagi avtomatik integratsiyani ta'minlaydi:
- * 1. Yangi foydalanuvchi ma'lumotlarini va pasport rasmlarini qabul qiladi.
- * 2. Har bir nomzod uchun alohida Google Doc fayli yaratib, pasport rasmlarini joylaydi.
- * 3. Ma'lumotlarni Google Sheets jadvaliga bo'sh joylarsiz, tartibli va ko'rkam formatda yozadi.
- * 4. Pasport va JSHSHIR bo'yicha dublikatlarni tekshiradi.
+ * Ushbu skript foydalanuvchining Google Sheets jadvaliga 100% moslashtirilgan:
+ * 
+ * Ustunlar tartibi (A - M):
+ * A: ISM
+ * B: FAMILYA
+ * C: OTASINI ISMI
+ * D: TUG'ULGAN YIL
+ * E: TEL NOMER
+ * F: EMAIL
+ * G: YASHASH MANZILI
+ * H: TEST TOPSHIRISH SANASI
+ * I: TEST TOPSHIRISH HUDUDI
+ * J: PASPORT SERIYA
+ * K: JSHSHIR
+ * L: PASPORT RASM (Google Doc havolasi)
+ * M: IMTHION TILI
  */
 
-// Ixtiyoriy: Agar script.google.com da alohida yaratilgan bo'lsa, jadval ID sini kiriting:
+// Ixtiyoriy: Agar script.google.com da alohida (standalone) ochilgan bo'lsa, jadval ID sini kiriting:
 var SPREADSHEET_ID = ""; // Masalan: "1JidKuM5ZY2IG0Hqg-ylxKeEGqSZycpuSmtb-XPebw2g"
+
+// Jadval ustunlari sarlavhasi (13 ta ustun)
+var HEADERS = [
+  "ISM",
+  "FAMILYA",
+  "OTASINI ISMI",
+  "TUG'ULGAN YIL",
+  "TEL NOMER",
+  "EMAIL",
+  "YASHASH MANZILI",
+  "TEST TOPSHIRISH SANASI",
+  "TEST TOPSHIRISH HUDUDI",
+  "PASPORT SERIYA",
+  "JSHSHIR",
+  "PASPORT RASM",
+  "IMTHION TILI"
+];
 
 /**
  * 1. Google Spreadsheet jadvalini olish
@@ -44,19 +72,20 @@ function getSpreadsheet() {
  */
 function getRealLastRow(sheet) {
   var lastRow = sheet.getLastRow();
-  if (lastRow === 0) return 0;
+  if (lastRow <= 1) return lastRow;
   
-  var values = sheet.getRange(1, 1, lastRow, 9).getValues();
-  for (var i = values.length - 1; i >= 0; i--) {
+  var values = sheet.getRange(1, 1, lastRow, 13).getValues();
+  for (var i = values.length - 1; i >= 1; i--) {
     var r = values[i];
-    // Qatorda Ism, Familiya yoki Pasport mavjud bo'lsa
+    // Qatorda Ism, Familiya yoki Pasport/JSHSHIR mavjud bo'lsa
     if ((r[0] && r[0].toString().trim() !== "") ||
         (r[1] && r[1].toString().trim() !== "") ||
-        (r[4] && r[4].toString().trim() !== "")) {
+        (r[9] && r[9].toString().trim() !== "") ||
+        (r[10] && r[10].toString().trim() !== "")) {
       return i + 1;
     }
   }
-  return 0;
+  return 1; // 1-qator sarlavha
 }
 
 /**
@@ -79,17 +108,18 @@ function dataUrlToBlob(dataUrl, defaultName) {
 }
 
 /**
- * 4. Bitta qatorni ko'rkam va tartibli formatlash
+ * 4. Bitta qatorni chiroyli va tartibli formatlash
  */
-function formatSingleRow(sheet, rowNum, birthDate, passportNum, jshshirNum, phoneNum) {
+function formatSingleRow(sheet, rowNum, birthDate, phoneNum, examDate, passportNum, jshshirNum) {
   sheet.setRowHeight(rowNum, 36);
-  var rowRange = sheet.getRange(rowNum, 1, 1, 9);
+  var rowRange = sheet.getRange(rowNum, 1, 1, 13);
 
-  // Ustunlar matn formati
+  // Matn formatlari (@) - raqamlar noto'g'ri o'zgarmasligi uchun
   sheet.getRange(rowNum, 4).setNumberFormat("@").setValue(birthDate || "");
-  sheet.getRange(rowNum, 5).setNumberFormat("@").setValue(passportNum || "");
-  sheet.getRange(rowNum, 6).setNumberFormat("@").setValue(jshshirNum || "");
-  sheet.getRange(rowNum, 7).setNumberFormat("@").setValue(phoneNum || "");
+  sheet.getRange(rowNum, 5).setNumberFormat("@").setValue(phoneNum || "");
+  sheet.getRange(rowNum, 8).setNumberFormat("@").setValue(examDate || "");
+  sheet.getRange(rowNum, 10).setNumberFormat("@").setValue(passportNum || "");
+  sheet.getRange(rowNum, 11).setNumberFormat("@").setValue(jshshirNum || "");
 
   // Shrift, markazlashtirish va chegara
   rowRange.setFontFamily("Arial");
@@ -98,16 +128,23 @@ function formatSingleRow(sheet, rowNum, birthDate, passportNum, jshshirNum, phon
   rowRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
   rowRange.setBorder(true, true, true, true, true, true, "#cbd5e1", SpreadsheetApp.BorderStyle.SOLID);
   
-  // Markazga tekislash (Sana, Pasport, JSHSHIR, Telefon, Link, Til)
-  sheet.getRange(rowNum, 4, 1, 6).setHorizontalAlignment("center");
+  // Markazga tekislash (Tug'ilgan sana, Telefon, Test sanasi, Test hududi, Pasport, JSHSHIR, Doc linki, Til)
+  sheet.getRange(rowNum, 4).setHorizontalAlignment("center");
+  sheet.getRange(rowNum, 5).setHorizontalAlignment("center");
+  sheet.getRange(rowNum, 8).setHorizontalAlignment("center");
+  sheet.getRange(rowNum, 9).setHorizontalAlignment("center");
+  sheet.getRange(rowNum, 10).setHorizontalAlignment("center");
+  sheet.getRange(rowNum, 11).setHorizontalAlignment("center");
+  sheet.getRange(rowNum, 12).setHorizontalAlignment("center");
+  sheet.getRange(rowNum, 13).setHorizontalAlignment("center");
 }
 
 /**
- * 5. POST so'rovini qabul qilish (Forma yuborilganda)
+ * 5. POST so'rovini qabul qilish (Forma yuborilganda yoki Test qilinganda)
  */
 function doPost(e) {
   var lock = LockService.getScriptLock();
-  lock.tryLock(30000); // Concurrency lock (max 30s)
+  lock.tryLock(30000); // 30 sekund concurrency lock
 
   try {
     var rawData = e.postData.contents;
@@ -123,65 +160,66 @@ function doPost(e) {
     }
 
     var ss = getSpreadsheet();
-    var sheet = ss.getSheetByName("informatika") || ss.getSheetByName("Varaq1") || ss.getActiveSheet();
+    var sheet = ss.getActiveSheet() || ss.getSheets()[0];
     
-    // Agar sarlavhalar (Header) mavjud bo'lmasa, o'rnatamiz
+    // Agar sarlavhalar mavjud bo'lmasa, o'rnatamiz
     if (sheet.getLastRow() === 0) {
-      sheet.appendRow([
-        "ISM",
-        "FAMILYA",
-        "EMAIL",
-        "T-YIL",
-        "P-SR",
-        "JSHSHIR",
-        "TEL-№",
-        "PASPORT RASM",
-        "IMTHION TILI"
-      ]);
+      sheet.appendRow(HEADERS);
       
-      var headerRange = sheet.getRange(1, 1, 1, 9);
-      headerRange.setBackground("#15803d"); // Yashil fon
+      var headerRange = sheet.getRange(1, 1, 1, 13);
+      headerRange.setBackground("#15803d"); // Yashil fon (Foydalanuvchi jadvalidagidek)
       headerRange.setFontColor("#ffffff");
       headerRange.setFontWeight("bold");
       headerRange.setFontFamily("Arial");
-      headerRange.setFontSize(11);
+      headerRange.setFontSize(10);
       headerRange.setVerticalAlignment("middle");
       headerRange.setHorizontalAlignment("center");
       sheet.setRowHeight(1, 38);
       sheet.setFrozenRows(1);
     }
 
-    // DUBLIKAT TEKSHIRUVI: Pasport seriyasi yoki JSHSHIR bo'yicha
+    // DUBLIKAT TEKSHIRUVI: Pasport (10-ustun) yoki JSHSHIR (11-ustun) bo'yicha
     var inputJshshir = (data.jshshir || "").toString().trim();
     var inputPass = (data.passportNumber || "").toString().replace(/\s/g, "").toUpperCase();
 
     var realLastRow = getRealLastRow(sheet);
     if (realLastRow > 1) {
-      var rows = sheet.getRange(2, 1, realLastRow - 1, 9).getValues();
+      var rows = sheet.getRange(2, 1, realLastRow - 1, 13).getValues();
       for (var i = 0; i < rows.length; i++) {
-        var existingPass = (rows[i][4] || "").toString().replace(/\s/g, "").toUpperCase(); // P-SR (5-ustun)
-        var existingJshshir = (rows[i][5] || "").toString().trim(); // JSHSHIR (6-ustun)
+        var existingPass = (rows[i][9] || "").toString().replace(/\s/g, "").toUpperCase(); // PASPORT SERIYA (10-ustun)
+        var existingJshshir = (rows[i][10] || "").toString().trim(); // JSHSHIR (11-ustun)
 
         if ((inputJshshir && existingJshshir === inputJshshir) || (inputPass && existingPass === inputPass)) {
           return ContentService.createTextOutput(JSON.stringify({
             result: "duplicate",
-            message: "Siz allaqachon Google Sheets jadvalida mavjudsiz!"
+            message: "Siz allaqachon ro'yxatdan o'tgansiz (JSHSHIR yoki Pasport takroriy)!"
           })).setMimeType(ContentService.MimeType.JSON);
         }
       }
     }
 
     // Google Doc yaratish (Pasport rasmlari uchun)
-    var docTitle = "GRE Pasport - " + (data.firstName || "") + " " + (data.lastName || "");
+    var docTitle = "Fizika Pasport - " + (data.lastName || "") + " " + (data.firstName || "");
     var doc = DocumentApp.create(docTitle);
     var body = doc.getBody();
     var hasImages = false;
+
+    // Nomzod ma'lumotlarini Doc fayl boshiga yozish
+    body.appendParagraph("F.I.Sh: " + (data.lastName || "") + " " + (data.firstName || "") + " " + (data.middleName || ""));
+    body.appendParagraph("Pasport: " + (data.passportNumber || "") + " | JSHSHIR: " + (data.jshshir || ""));
+    body.appendParagraph("Telefon: " + (data.phone || "") + " | Email: " + (data.email || ""));
+    var fullAddress = (data.region || "") + (data.district ? (", " + data.district) : "");
+    body.appendParagraph("Yashash manzili: " + fullAddress);
+    body.appendParagraph("Test hududi: " + (data.examRegion || "") + " | Test sanasi: " + (data.examDate || ""));
+    body.appendParagraph("Imtihon tili: " + (data.examLanguage || "O'zbek tili"));
+    body.appendHorizontalRule();
 
     // Pasport Oldi Rasmi
     if (data.passportFront && data.passportFront.dataUrl) {
       try {
         var frontBlob = dataUrlToBlob(data.passportFront.dataUrl, "passport_front");
         if (frontBlob) {
+          body.appendParagraph("PASPORT / ID KARTA OLDI TOMONI:").setBold(true);
           var img = body.appendImage(frontBlob);
           var width = img.getWidth();
           var height = img.getHeight();
@@ -201,6 +239,7 @@ function doPost(e) {
       try {
         var backBlob = dataUrlToBlob(data.passportBack.dataUrl, "passport_back");
         if (backBlob) {
+          body.appendParagraph("PASPORT / ID KARTA ORQA TOMONI:").setBold(true);
           var imgBack = body.appendImage(backBlob);
           var w = imgBack.getWidth();
           var h = imgBack.getHeight();
@@ -215,67 +254,78 @@ function doPost(e) {
       }
     }
 
-    // Dastlabki bo'sh paragrafni o'chirish
-    if (hasImages && body.getNumChildren() > 1) {
-      var firstChild = body.getChild(0);
-      if (firstChild.getType() === DocumentApp.ElementType.PARAGRAPH && firstChild.asParagraph().getText().trim() === "") {
-        firstChild.removeFromParent();
-      }
-    }
-
     doc.saveAndClose();
 
-    // Google Doc fayliga ochiq havola ruxsatini berish
+    // Google Doc fayliga ochiq havola (Anyone with link can view) ruxsatini berish
+    var googleDocUrl = "";
     try {
-      DriveApp.getFileById(doc.getId()).setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      var file = DriveApp.getFileById(doc.getId());
+      file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      googleDocUrl = doc.getUrl();
     } catch (eShare) {
       console.log("Drive sharing error:", eShare);
+      googleDocUrl = doc.getUrl();
     }
 
-    var googleDocUrl = doc.getUrl();
-
-    // Sanani formatlash (DD.MM.YYYY)
-    var formattedBirthDate = data.birthDate || "";
-    if (formattedBirthDate.indexOf("-") !== -1) {
-      var dateParts = formattedBirthDate.split("-");
-      if (dateParts.length === 3 && dateParts[0].length === 4) {
-        formattedBirthDate = dateParts[2] + "." + dateParts[1] + "." + dateParts[0];
-      }
-    }
-
-    var phoneValue = (data.phone || "").replace(/^\+/, "").trim();
-
-    // BO'SH QATORLARSIZ DARHOL KETMA-KET QATORGA YOZISH:
+    var phoneValue = (data.phone || "").trim();
     var targetRow = realLastRow + 1;
+
+    // Foydalanuvchi jadvalidagi 13 ta ustun bo'yicha qiymatlar:
+    // A: ISM
+    // B: FAMILYA
+    // C: OTASINI ISMI
+    // D: TUG'ULGAN YIL
+    // E: TEL NOMER
+    // F: EMAIL
+    // G: YASHASH MANZILI
+    // H: TEST TOPSHIRISH SANASI
+    // I: TEST TOPSHIRISH HUDUDI
+    // J: PASPORT SERIYA
+    // K: JSHSHIR
+    // L: PASPORT RASM
+    // M: IMTHION TILI
     var rowValues = [
       data.firstName || "",
       data.lastName || "",
+      data.middleName || "",
+      data.birthDate || "",
+      phoneValue,
       data.email || "",
-      formattedBirthDate,
+      fullAddress,
+      data.examDate || "",
+      data.examRegion || "",
       data.passportNumber || "",
       data.jshshir || "",
-      phoneValue,
-      "", // Pasport rasm havolasi (RichTextValue orqali o'rnatiladi)
-      (data.examModule ? (data.examModule + " (" + (data.examLanguage || "") + ")") : (data.examLanguage || ""))
+      "", // Doc havolasi RichText orqali joylanadi
+      data.examLanguage || "O'zbek tili"
     ];
 
-    sheet.getRange(targetRow, 1, 1, 9).setValues([rowValues]);
+    sheet.getRange(targetRow, 1, 1, 13).setValues([rowValues]);
 
-    // Google Doc havolasini RichText formatida joylash (Locale xatolari va #ERROR! ning oldini olish uchun)
+    // Google Doc havolasini 12-ustun (L) ga RichText ko'rinishida joylash
     if (googleDocUrl) {
       try {
         var richText = SpreadsheetApp.newRichTextValue()
           .setText("📄 Hujjatni ko'rish")
           .setLinkUrl(googleDocUrl)
           .build();
-        sheet.getRange(targetRow, 8).setRichTextValue(richText);
+        sheet.getRange(targetRow, 12).setRichTextValue(richText);
       } catch (errRich) {
         console.log("RichText error:", errRich);
-        sheet.getRange(targetRow, 8).setValue(googleDocUrl);
+        sheet.getRange(targetRow, 12).setValue(googleDocUrl);
       }
     }
 
-    formatSingleRow(sheet, targetRow, formattedBirthDate, data.passportNumber, data.jshshir, phoneValue);
+    // Formatlash
+    formatSingleRow(
+      sheet, 
+      targetRow, 
+      data.birthDate, 
+      phoneValue, 
+      data.examDate, 
+      data.passportNumber, 
+      data.jshshir
+    );
 
     return ContentService.createTextOutput(JSON.stringify({
       result: "success",
@@ -295,7 +345,7 @@ function doPost(e) {
 }
 
 /**
- * 6. GET so'roviga barcha nomzodlarni qaytarish
+ * 6. GET so'rovi (Ping tekshirish yoki barcha nomzodlarni olish)
  */
 function doGet(e) {
   try {
@@ -308,7 +358,7 @@ function doGet(e) {
     }
 
     var ss = getSpreadsheet();
-    var sheet = ss.getSheetByName("informatika") || ss.getSheetByName("Varaq1") || ss.getActiveSheet();
+    var sheet = ss.getActiveSheet() || ss.getSheets()[0];
     var realLast = getRealLastRow(sheet);
 
     if (realLast <= 1) {
@@ -318,26 +368,41 @@ function doGet(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    var rows = sheet.getRange(2, 1, realLast - 1, 9).getValues();
+    var range = sheet.getRange(2, 1, realLast - 1, 13);
+    var rows = range.getValues();
+    var richTexts = range.getRichTextValues();
     var candidates = [];
 
     for (var i = rows.length - 1; i >= 0; i--) {
       var r = rows[i];
-      if (!r[0] && !r[1] && !r[4]) continue;
+      if (!r[0] && !r[1] && !r[9]) continue;
+
+      var docUrl = "";
+      if (richTexts && richTexts[i] && richTexts[i][11]) {
+        docUrl = richTexts[i][11].getLinkUrl() || (r[11] || "").toString();
+      } else {
+        docUrl = (r[11] || "").toString();
+      }
 
       candidates.push({
-        id: "GRE-" + (1000 + i + 1),
+        id: "FIZ-" + (1000 + i + 1),
         firstName: (r[0] || "").toString(),
         lastName: (r[1] || "").toString(),
-        email: (r[2] || "").toString(),
+        middleName: (r[2] || "").toString(),
         birthDate: (r[3] || "").toString(),
-        passportNumber: (r[4] || "").toString(),
-        jshshir: (r[5] || "").toString(),
-        phone: (r[6] || "").toString(),
-        googleDocUrl: (r[7] || "").toString(),
-        examLanguage: (r[8] || "").toString(),
-        status: "Qabul qilindi",
-        submittedAt: ""
+        phone: (r[4] || "").toString(),
+        email: (r[5] || "").toString(),
+        address: (r[6] || "").toString(),
+        region: (r[6] || "").toString(),
+        district: "",
+        examDate: (r[7] || "").toString(),
+        examRegion: (r[8] || "").toString(),
+        passportNumber: (r[9] || "").toString(),
+        jshshir: (r[10] || "").toString(),
+        googleDocUrl: docUrl,
+        examLanguage: (r[12] || "").toString(),
+        submittedAt: "",
+        status: "Qabul qilindi"
       });
     }
 
@@ -350,77 +415,5 @@ function doGet(e) {
       result: "error",
       error: err.toString()
     })).setMimeType(ContentService.MimeType.JSON);
-  }
-}
-
-/**
- * 7. UTILITY: Jadvaldagi barcha bo'sh oraliqlarni yo'qotib, ma'lumotlarni tepaga zichlab tartibga solish
- * Apps Script oynasida 'formatAllSheetRows' ni tanlab 'Run' (▶️) bosing!
- */
-function formatAllSheetRows() {
-  var ss = getSpreadsheet();
-  var sheet = ss.getSheetByName("informatika") || ss.getSheetByName("Varaq1") || ss.getActiveSheet();
-  var realLast = getRealLastRow(sheet);
-
-  if (realLast <= 0) return;
-
-  var values = sheet.getRange(1, 1, realLast, 9).getValues();
-  var cleanRows = [];
-  
-  for (var i = 0; i < values.length; i++) {
-    var r = values[i];
-    if (i === 0 || (r[0] && r[0].toString().trim() !== "") || (r[1] && r[1].toString().trim() !== "") || (r[4] && r[4].toString().trim() !== "")) {
-      cleanRows.push(r);
-    }
-  }
-
-  // To'liq jadvalni tozalab, faqat tartibli qatorlarni qayta yozish
-  var totalRows = Math.max(sheet.getLastRow(), cleanRows.length);
-  sheet.getRange(1, 1, totalRows, 9).clearContent();
-  sheet.getRange(1, 1, cleanRows.length, 9).setValues(cleanRows);
-
-  // Header 1-qatorni formatlash
-  var headerRange = sheet.getRange(1, 1, 1, 9);
-  headerRange.setBackground("#15803d");
-  headerRange.setFontColor("#ffffff");
-  headerRange.setFontWeight("bold");
-  headerRange.setFontFamily("Arial");
-  headerRange.setFontSize(11);
-  headerRange.setVerticalAlignment("middle");
-  headerRange.setHorizontalAlignment("center");
-  sheet.setRowHeight(1, 38);
-  sheet.setFrozenRows(1);
-
-  if (cleanRows.length > 1) {
-    var dataRange = sheet.getRange(2, 1, cleanRows.length - 1, 9);
-    dataRange.setFontFamily("Arial");
-    dataRange.setFontSize(10);
-    dataRange.setVerticalAlignment("middle");
-    dataRange.setWrapStrategy(SpreadsheetApp.WrapStrategy.CLIP);
-    dataRange.setBorder(true, true, true, true, true, true, "#cbd5e1", SpreadsheetApp.BorderStyle.SOLID);
-
-    for (var rowIdx = 2; rowIdx <= cleanRows.length; rowIdx++) {
-      sheet.setRowHeight(rowIdx, 36);
-
-      var cellRange = sheet.getRange(rowIdx, 8);
-      var valH = cellRange.getValue().toString();
-      var formulaH = cellRange.getFormula();
-      
-      var urlMatch = valH.match(/https?:\/\/[^\s"'\)]+/) || formulaH.match(/https?:\/\/[^\s"'\)]+/);
-      if (urlMatch) {
-        var targetUrl = urlMatch[0];
-        try {
-          var rText = SpreadsheetApp.newRichTextValue()
-            .setText("📄 Hujjatni ko'rish")
-            .setLinkUrl(targetUrl)
-            .build();
-          cellRange.setRichTextValue(rText);
-        } catch (eRich) {
-          cellRange.setValue(targetUrl);
-        }
-      }
-    }
-
-    sheet.getRange(2, 4, cleanRows.length - 1, 6).setHorizontalAlignment("center");
   }
 }
