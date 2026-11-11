@@ -220,9 +220,6 @@ export default function RegistrationForm({
       if (!formData.examRegion) {
         newErrors.examRegion = "Imtihon topshiriladigan hududni tanlang";
       }
-      if (!formData.examDate) {
-        newErrors.examDate = "O'zingizga qulay test topshirish sanasini tanlang";
-      }
       if (!formData.examLanguage) {
         newErrors.examLanguage = "Imtihon topshirish tilini tanlang";
       }
@@ -532,7 +529,7 @@ export default function RegistrationForm({
                 2-bosqich: Yashash manzili va Test parametrlari
               </h2>
               <p className={`text-xs ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Yashash hududingiz va o'zingizga qulay imtihon joyi hamda sanasini tanlang
+                Yashash hududingiz va imtihon topshirish joyini tanlang
               </p>
             </div>
 
@@ -615,7 +612,7 @@ export default function RegistrationForm({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {/* Test topshirish hududi */}
-                <div>
+                <div className="sm:col-span-2">
                   <label className={`block text-xs font-semibold mb-1.5 ${
                     isDarkMode ? 'text-slate-300' : 'text-slate-700'
                   }`}>
@@ -639,34 +636,6 @@ export default function RegistrationForm({
                   {errors.examRegion && (
                     <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
                       <AlertCircle className="w-3.5 h-3.5" /> {errors.examRegion}
-                    </p>
-                  )}
-                </div>
-
-                {/* Test topshirish sanasi */}
-                <div>
-                  <label className={`block text-xs font-semibold mb-1.5 ${
-                    isDarkMode ? 'text-slate-300' : 'text-slate-700'
-                  }`}>
-                    Test topshirish sanasi (Qulay sana) <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <Calendar className="w-4 h-4 absolute left-3.5 top-3 text-slate-400" />
-                    <input
-                      type="date"
-                      value={formData.examDate}
-                      onChange={(e) => {
-                        setFormData(prev => ({ ...prev, examDate: e.target.value }));
-                        if (errors.examDate) setErrors(prev => ({ ...prev, examDate: null }));
-                      }}
-                      className={`w-full pl-10 pr-3.5 py-2.5 rounded-xl text-sm font-medium clean-input ${
-                        errors.examDate ? 'border-rose-500 bg-rose-50/20' : ''
-                      }`}
-                    />
-                  </div>
-                  {errors.examDate && (
-                    <p className="text-xs text-rose-500 mt-1 flex items-center gap-1">
-                      <AlertCircle className="w-3.5 h-3.5" /> {errors.examDate}
                     </p>
                   )}
                 </div>

@@ -109,18 +109,20 @@ export default function ReceiptModal({ data, onClose, isDarkMode }) {
               </div>
             </div>
 
-            {/* Test topshirish sanasi */}
-            <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'}`}>
-              <div className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 mb-0.5">
-                <CalendarCheck className="w-3 h-3 text-emerald-600" /> Test Topshirish Sanasi
+            {/* Test topshirish sanasi (agar mavjud bo'lsa) */}
+            {data.examDate && (
+              <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'}`}>
+                <div className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 mb-0.5">
+                  <CalendarCheck className="w-3 h-3 text-emerald-600" /> Test Topshirish Sanasi
+                </div>
+                <div className="font-bold text-xs text-emerald-600 dark:text-emerald-400">
+                  {data.examDate}
+                </div>
               </div>
-              <div className="font-bold text-xs text-emerald-600 dark:text-emerald-400">
-                {data.examDate}
-              </div>
-            </div>
+            )}
 
             {/* Test topshirish hududi */}
-            <div className={`p-2.5 rounded-xl border ${isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'}`}>
+            <div className={`p-2.5 rounded-xl border ${!data.examDate ? 'sm:col-span-2' : ''} ${isDarkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-slate-50/80 border-slate-200'}`}>
               <div className="text-[10px] text-slate-500 font-semibold flex items-center gap-1 mb-0.5">
                 <MapPin className="w-3 h-3 text-emerald-600" /> Test Topshirish Hududi
               </div>
